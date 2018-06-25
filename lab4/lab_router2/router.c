@@ -93,31 +93,6 @@ int main(int argc, char* argv[]){
                 dealPacket(recvBuf,BUFSIZE);
              }
         
-       // struct EthPack* ipPack = (struct IPPack*)recvBuf;
-        /*if(addr.sll_pkttype == PACKET_HOST){
-            struct sockaddr_ll dest_addr = {
-                .sll_family   = AF_PACKET,
-                .sll_protocol = htons(ETH_P_IP),
-                .sll_halen    = ETH_ALEN,
-                .sll_ifindex  = ifIndex,
-            };
-
-            uint32_t temp = ipPack->srcIP;
-            ipPack->srcIP = ipPack->dstIP;
-            ipPack->dstIP = temp;
-            ipPack->checksum = checkSum(ipPack,IP_HEADER_LEN);
-
-            char nextMac[ETH_ALEN]={0x00,0x0c,0x29,0xed,0xcb,0x9f};
-            //getNextMac(nextMac);
-            memcpy(&dest_addr.sll_addr, nextMac, ETH_ALEN);
-            int ret = sendto(sockfd,  buf,       sizeof(struct IPPack), 
-                     0,       (struct sockaddr *)&dest_addr, sizeof(dest_addr));
-            if(ret < 0){
-                perror("Error: Send ping failed!\n");
-                assert(0);
-            }
-        }*/
-       // memcpy(tmpBuf,recvBuf,BUFSIZE);
         }
     }
 
@@ -135,7 +110,6 @@ void readHostIP(){
                 assert(0);
             }
             printf("*** Get router1 ens33 IP : %s ***\n", ip);
-            //eth0IP = atoi(ip);
         }
         else if(ethx[4]=='8'){
             if (inet_pton(AF_INET, ip, (uint8_t*)&eth1IP) == -1){
@@ -143,7 +117,6 @@ void readHostIP(){
                 assert(0);
             }
             printf("*** Get router1 ens38 IP : %s ***\n", ip);
-            //eth1IP = atoi(ip);
         }
         else{ //gateway
             if (inet_pton(AF_INET, ip, (uint8_t*)&gwIP) == -1){
@@ -151,7 +124,6 @@ void readHostIP(){
                 assert(0);
             }
             printf("*** Get router1 default gateway IP: %s ***\n\n", ip);
-           // gwIP = atoi(ip);
         }
     }
     fclose(fp);
@@ -174,14 +146,7 @@ void getIfMac(const char* ifName, char* macAddr){
         perror("Error: getIfInfo(), sfd");
         assert(0);
     }     
-    /* // get interface index 
-    // SIOCGIFINDEX :Retrieve the interface index of the interface into ifr_ifindex.
-    if (ioctl(sfd, SIOCGIFINDEX, &req) < 0){
-        perror("Error: Get ifindex failed");
-        assert(0);
-    }
-    *ifIndex = req.ifr_ifindex;
-    printf("    ifIndex = %d\n", *ifIndex);*/
+  
     //  get mac addr
     if (ioctl(sfd, SIOCGIFHWADDR, &req) < 0){
         perror("Error:Get Mac Addr Failed!");
@@ -210,8 +175,7 @@ void getIfIndex(const char* ifName, uint32_t* ifIndex){
         perror("Error: getIfInfo, strlen(ifName) too large\n");
         assert(0);
     }
-    strcpy(req.ifr_name, ifName);//, IFNAMSIZ - 1);
-   // printf("*** ifName : %s ***\n",ifName);
+    strcpy(req.ifr_name, ifName);
 
     //AF_PACKET: Low level packet interface
     int sfd = 0;
@@ -226,7 +190,7 @@ void getIfIndex(const char* ifName, uint32_t* ifIndex){
         assert(0);
     }
     *ifIndex = req.ifr_ifindex;
-  //  printf("    ifIndex = %d\n", *ifIndex);
+
 }
 
 void printDeviceTable(){
@@ -264,19 +228,7 @@ void readRouteTable(){
         net[i] = '\0';
         inet_pton(AF_INET,net,&routeTable[routeItemNum].dstNet);//presentative to network
         routeTable[routeItemNum].netmask = atoi(&net[i+1]);
-        //routeTable[routeItemNum].
-        //if(strcmp(ifname,ifName0)==0){
-            //strcpy(routeTable[routeItemNum].ifIndex,ifName0);
         getIfIndex(ifname,&routeTable[routeItemNum].ifIndex);
-        //}
-        //else if(strcmp(ifname,ifName1)==0){
-            //strcpy(routeTable[routeItemNum].ifIndex,ifName1);
-        //    routeTable[routeItemNum].ifIndex = 3;
-        //}
-       /* printf("*** Route Rule %d:%s/%d via %s *** \n",
-                routeItemNum,       net,
-                routeTable[routeItemNum].netmask,
-                ifname);*/
         routeItemNum++;
     }
     fclose(fp);
@@ -297,19 +249,13 @@ void printRouteTable(){
 
 void reply(uint8_t* recvBuf, int recvLength){
     struct EthPack* ethPack = (struct EthPack*)recvBuf;
-    //printf("Dealing\n");
-    //printf("%04x %04x\n",ethPack->ethType,PROTO_IP);
+
     if(ethPack->ethType == htons(ETH_P_ARP)){
         printf("Receing an ARP packet!\n");
     }
     else if(ethPack->ethType == htons(PROTO_IP)){
         struct IPPack* ipPack =(struct IPPack*) &ethPack->ipPack;
         struct IcmpPack* icmpPack = (struct IcmpPack*)(ipPack->payload);
-        /*printf("ippack[0]=%02x ippack[20]=%02x icmp[0]=%02x \n",
-                *((uint8_t*)ipPack),
-                *((uint8_t*)ipPack+20),
-                *((uint8_t*)icmpPack));
-        printf("%04x %04x\n",ipPack->protocol,IP_ICMP);*/
         if(ipPack->protocol!=IP_ICMP){
             printf("Not a ICMP Packet\n");
             printf("icmpPack->type:%02x",icmpPack->type);
@@ -338,12 +284,10 @@ void reply(uint8_t* recvBuf, int recvLength){
                 };
                 char nextMac[ETH_ALEN]={0x00,0x0c,0x29,0x6e,0x87,0x31};//route1 ens38
                 memcpy(&dstAddr.sll_addr,nextMac,ETH_ALEN);
-                //sockfd = socket(AF_INET,SOCK_RAW,htons(ETH_P_ALL));
                 sendto(sockfd, recvBuf, recvLength,
                     0, (struct sockaddr*)&dstAddr,sizeof(struct sockaddr_ll));
                 printf("Reply ICMP successfully: from %s ",printIP(ipPack->srcIP));
                 printf("to %s\n",printIP(ipPack->dstIP));
-                //close(sockfd);
             }break;
             case ICMP_UNREACHABLE:
                 printf("Destination unreachable!\n\n");
@@ -362,19 +306,14 @@ void dealPacket(char* buf, int length){
     }
     else if(ethPack->ethType == htons(PROTO_IP)){
         struct IPPack* ipPack = (struct IPPack*)&(ethPack->ipPack);
-        // printf("%d ",((uint8_t*)&ethPack->ethType)-(uint8_t*)ethPack);
-        // printf("%d \n",((uint8_t*)&(ethPack->ipPack))-(uint8_t*)ethPack);
-        //printf("%d ",((uint8_t*)ipPack)-(uint8_t*)ethPack);
-        //printf("%02x %02x\n",*((uint8_t*)ethPack+14),
-        //               *((uint8_t*)ipPack));
-        //printf("pro %x\n",ipPack->protocol);
+
         switch(ipPack->protocol){
             case IP_ICMP: printf("Receving a ICMP Packet \n");break;
             default : printf("Receiving an unknown packet!\n");
         }
         printf("%s ---> ",printIP(ipPack->srcIP));//otherwise not flush the buffer
         printf("%s",printIP(ipPack->dstIP));
-        //printf("%d\n",routeItemNum);
+
         int i=0;
         for(;i<routeItemNum;i++){
             uint32_t netAddr = getNetAddr(ipPack->dstIP,
@@ -399,16 +338,7 @@ void dealPacket(char* buf, int length){
                 .sll_halen = ETH_ALEN,
                 .sll_ifindex = routeTable[i].ifIndex,
             };
-            //Use NetAddr to get ifIndex from RouteTable
-            //Then use ifIndex to get mac
-           /* int j=0;
-            for(;j<deviceItemNum;j++){
-                if(deviceTable[j].ifIndex == routeTable[i].ifIndex){
-                    memcpy(dstAddr.sll_halen,deviceTable[j].macAddr,ETH_ALEN);
-                    printf("%s %s\n",routeTable[i].ifIndex,
-                                     deviceTable[j].macAddr);
-                }
-            }*/
+        
             if( routeTable[i].ifIndex == 2){
                 char tmp[6]={0x00,0x0c,0x29,0x6e,0x87,0x31};// pc2
                 memcpy(dstAddr.sll_addr,tmp,ETH_ALEN);
@@ -443,23 +373,19 @@ uint32_t getNetAddr(uint32_t ip, uint32_t netmaskNum){
     uint32_t netmask = 0xffffffff << (32-netmaskNum);
     return htonl( ntohl(ip) & netmask );
 }
-uint16_t checkSum(unsigned char *addr, int length)
-{
+uint16_t checkSum(unsigned char *addr, int length){
     unsigned short *p = (unsigned short *)addr;
     unsigned int sum = 0;
-    while (length > 1)
-    {
+    while (length > 1){
         sum += *p;
         p++;
         length = length - 2;
     }
-    if (length == 1)
-    {
+    if (length == 1){
         sum += *p;
     }
 
-    while ((sum >> 16) != 0)
-    {
+    while ((sum >> 16) != 0){
         sum = (sum >> 16) + (sum & 0xffff);
     }
     return (unsigned short)(~sum);

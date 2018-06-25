@@ -42,11 +42,11 @@ char* printIP(uint32_t ip) ;
 uint16_t checkSum(unsigned char *addr, int length);
 
 int main(int argc, char* argv[]){
-    //printf("Argc : %d\n",argc);
+
     parseCmd(argc,argv);
     readHostIP();     //get host ip addr from configure.file
     getIfInfo(ifName);//get host mac addr
-    //printf("3\n");
+
     if( (sockfd = socket(AF_PACKET, SOCK_DGRAM, htons(ETH_P_ALL))) < 0){
         perror("Error:Init Socket Failed!\n");
         assert(0);
@@ -55,9 +55,6 @@ int main(int argc, char* argv[]){
     uint8_t recvBuf[BUFSIZ];
     sendPing(sequence++);
     while(1){
-        //printf("in while\n");
-        
-        //memset(recvBuf,0,BUFSIZ);
         struct sockaddr_ll addr;
         socklen_t addrLen = sizeof(addr);
         int recvLength = recvfrom(sockfd,recvBuf,BUFSIZ,0,
@@ -87,7 +84,6 @@ void parseCmd(int argc,char* argv[]){
     }
     char tmp[20];
     inet_pton(AF_INET, argv[argc-1], (uint8_t*)&dstIP);
-   // dstIP = ntohl(atoi(tmp));
     printf("*** Get dstIP from file : %s\n",argv[argc-1]);
 }
 
@@ -103,7 +99,6 @@ void readHostIP(){
                 exit(0);
             }
             printf("*** Get eth0 IP   : %s ***\n", ip);
-            //eth0IP = atoi(ip);
         }
         else if(ethx[3]=='1'){
             if (inet_pton(AF_INET, ip, (uint8_t*)&eth1IP) == -1)
@@ -112,7 +107,6 @@ void readHostIP(){
                 exit(0);
             }
             printf("*** Get eth1 IP: %s ***\n", ip);
-            //eth1IP = atoi(ip);
         }
         else{
             if (inet_pton(AF_INET, ip, (uint8_t*)&gwIP) == -1)
@@ -121,7 +115,6 @@ void readHostIP(){
                 exit(0);
             }
             printf("*** Get Gateway IP: %s ***\n", ip);
-           // gwIP = atoi(ip);
         }
     }
     fclose(fp);
@@ -207,7 +200,6 @@ void getNextMac(char* dstMac){
         .sll_halen   = ETH_ALEN,
         .sll_ifindex = ifIndex,
     };
-    //memcpy(&destAddr.sll_addr, &dest_mac_addr, ETH_ALEN);
     sendto(sockfd,                        arpBuf, sizeof(struct EthArpPack), 
                 0,  (struct sockaddr *)&destAddr, sizeof( struct sockaddr_ll)  );
     
@@ -332,74 +324,20 @@ void  dealPacket(uint8_t* recvBuf,int recvLength){
     //printf("Receive REPLY\n");
 }
 
-/*
-void fillIcmpHdr(struct icmphdr *icmp_hdr, int seq)
-{
-    icmp_hdr->type = ICMP_ECHO; //ICMP_ECHO REPLY=0(Reply); ICMP_ECHO=8(Request)
-    icmp_hdr->code = 0;
-    icmp_hdr->checksum = 0; //clear the checkSum field
-    //  htons():(unsigned short) Host Order ==> Network Order *
-    icmp_hdr->un.echo.id = htons(getpid());
-    icmp_hdr->un.echo.sequence = htons(seq);
 
-    gettimeofday((struct timeval *)((char *)icmp_hdr + ICMP_HEAD_LEN), NULL);
-    // * fill the checkSum field *
-    icmp_hdr->checksum = checkSum((unsigned char *)icmp_hdr, ICMP_PACKET_LEN);
-}*/
-/*
-void icmpRequest(int fd, int seq)
-{
-    fillIcmpHdr((struct icmphdr *)buff, seq);
-     * sendto(int sockfd, const void *buf,                size_t len,
-     *        int flags,  const struct sockaddr*dst_addr, socklen_t addrlen);
-     *
-    int addrlen = sizeof(struct sockaddr_in);
-    int req = sendto(fd, buff, ICMP_PACKET_LEN, 0, (struct sockaddr *)&dst_addr, addrlen);
-    assert(req != -1);
-}*/
-/*
-int icmpReply(int fd)
-{
-    //    int addrlen = sizeof(struct sockaddr_in);
-    int rcv = recvfrom(fd, recvbuff, RECV_MAX_SIZE, 0, NULL, NULL);
-    if (rcv == -1)
-        return 0; //false
-
-    struct ip *ip = (struct ip *)(recvbuff);
-    struct icmphdr *icmp_hdr = (struct icmphdr *)(recvbuff + sizeof(struct iphdr));
-    struct timeval *send_time = (struct timeval *)(recvbuff + sizeof(struct iphdr) + ICMP_HEAD_LEN);
-
-    struct timeval now_time;
-    gettimeofday(&now_time, NULL);
-    //printf("now:%ld %ld; send:%ld %ld\n",now_time.tv_sec,now_time.tv_usec,
-    //                            send_time->tv_sec,send_time->tv_usec);
-    //printf("%d %d\n",    (ip->ip_len),(short)ip->ip_hl);
-    printf("%d bytes from %s:\t icmp_seq=%d\t ttl=%d\t   time=%.2fms\n",
-           ntohs(ip->ip_len) - ip->ip_hl * 4, // ntohs()      : (the unsigned short) Network Order ==> ost Order
-           inet_ntoa(dst_addr.sin_addr),      // inet_ntoa(): Data in Network Order ==> IP Address(NUMS_AND_DOTS)
-           ntohs(icmp_hdr->un.echo.sequence),
-           ip->ip_ttl,
-           (double)(now_time.tv_sec - send_time->tv_sec) * 1000 + (double)(now_time.tv_usec - send_time->tv_usec) / 1000);
-    return 1; //true
-}
-*/
-uint16_t checkSum(unsigned char *addr, int length)
-{
+uint16_t checkSum(unsigned char *addr, int length){
     unsigned short *p = (unsigned short *)addr;
     unsigned int sum = 0;
-    while (length > 1)
-    {
+    while (length > 1){
         sum += *p;
         p++;
         length = length - 2;
     }
-    if (length == 1)
-    {
+    if (length == 1){
         sum += *p;
     }
 
-    while ((sum >> 16) != 0)
-    {
+    while ((sum >> 16) != 0){
         sum = (sum >> 16) + (sum & 0xffff);
     }
     return (unsigned short)(~sum);
