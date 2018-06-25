@@ -45,8 +45,6 @@ void getIfIndex(const char* ifName, uint32_t* ifIndex);
 void getIfMac(const char*ifName, char* macAddr);
 void getIfIP(const char*ifName, uint32_t* ip);
 
-//void dealPacket(char* buf, int length);
-//void reply(uint8_t* recvBuf,int recvLength);
 void repack(uint8_t* recvBuf,int recvLength);
 void unpack(uint8_t* recvBuf,int recvLength);
 
@@ -57,8 +55,6 @@ void  printDeviceTable();
 uint16_t checkSum(unsigned char *addr, int length);
 
 int main(int argc, char* argv[]){
-   // readHostIP();     //get host ip addr from configure.file
-    
     getIfIndex(ifName0,  &deviceTable[0].ifIndex);//get host mac addr
     getIfMac(ifName0, deviceTable[0].macAddr);
     getIfIP(ifName0,&deviceTable[0].ipAddr);
@@ -97,13 +93,11 @@ int main(int argc, char* argv[]){
         memcpy(tmpBuf,recvBuf,recvLength);
 
         ifIndex = addr.sll_ifindex;
-        //printf("%d %d\n",addr.sll_pkttype,PACKET_HOST);
-        //printf("%d %d\n",addr.sll_hatype,ARPHRD_ETHER);
-        //if(addr.sll_pkttype == PACKET_HOST){
+ 
         if((addr.sll_hatype == ARPHRD_ETHER)){
             struct EthPack* ethPack = (struct EthPack*)recvBuf;
             struct IPPack* ipPack = (struct IPPack*) &ethPack->ipPack;
-            //printf(" 0x%08x 0x%08x\n",ipPack->dstIP,eth0IP);
+
             if(ipPack->dstIP == vpnEntrance ){
                 printf("Receiving a packet from another VPNServer\n");
                 unpack(tmpBuf,recvLength);
@@ -130,7 +124,6 @@ void readHostIP(){
                 assert(0);
             }
             printf("*** Get router1 ens33 IP : %s ***\n", ip);
-            //eth0IP = atoi(ip);
         }
         else if(ethx[4]=='8'){
             if (inet_pton(AF_INET, ip, (uint8_t*)&eth1IP) == -1){
@@ -138,7 +131,6 @@ void readHostIP(){
                 assert(0);
             }
             printf("*** Get router1 ens38 IP : %s ***\n", ip);
-            //eth1IP = atoi(ip);
         }
         else{ //gateway
             if (inet_pton(AF_INET, ip, (uint8_t*)&gwIP) == -1){
@@ -146,7 +138,6 @@ void readHostIP(){
                 assert(0);
             }
             printf("*** Get router1 default gateway IP: %s ***\n\n", ip);
-           // gwIP = atoi(ip);
         }
     }
     fclose(fp);
@@ -160,8 +151,7 @@ void getIfMac(const char* ifName, char* macAddr){
         perror("Error: getIfInfo, strlen(ifName) too large\n");
         assert(0);
     }
-    strcpy(req.ifr_name, ifName);//, IFNAMSIZ - 1);
-   // printf("*** ifName : %s ***\n",ifName);
+    strcpy(req.ifr_name, ifName);
 
     //AF_PACKET: Low level packet interface
     int sfd = 0;
@@ -177,15 +167,6 @@ void getIfMac(const char* ifName, char* macAddr){
     }
     memset(macAddr, 0 ,ETH_ALEN);
     memcpy(macAddr, &(req.ifr_hwaddr.sa_data), ETH_ALEN);
-
-   /*
-    printf("*** Get %s MacAddr: ",ifName); 
-    int i = 0;
-    for (; i < 5; i++){
-        printf("%02x:", *(uint8_t*)(macAddr+i));
-    }
-    printf("%02x ***\n\n", macAddr[i]);*/
-
     close(sfd);
 }
 
@@ -202,7 +183,6 @@ void getIfIP(const char*ifName, uint32_t* ip){
     //AF_PACKET: Low level packet interface
     int sfd = 0;
     if ((sfd = socket(AF_PACKET, SOCK_DGRAM, htons(ETH_P_IP))) < 0){
-    //if ((sfd = socket(AF_PACKET, SOCK_RAW, IPPROTO_RAW)) < 0){
         perror("Error: getIfIP(), sfd");
         assert(0);
     }     
@@ -216,7 +196,6 @@ void getIfIP(const char*ifName, uint32_t* ip){
     *ip = ((struct sockaddr_in*)&req.ifr_addr)->sin_addr.s_addr;
   
     printf("*** Get %s IPAddr: %s ***\n",ifName,printIP(*ip));
-            //inet_ntoa(((struct sockaddr_in*)&req.ifr_addr)->sin_addr)); 
     close(sfd);
 }
 
@@ -228,8 +207,8 @@ void getIfIndex(const char* ifName, uint32_t* ifIndex){
         perror("Error: getIfInfo, strlen(ifName) too large\n");
         assert(0);
     }
-    strcpy(req.ifr_name, ifName);//, IFNAMSIZ - 1);
-   // printf("*** ifName : %s ***\n",ifName);
+    strcpy(req.ifr_name, ifName);
+
 
     //AF_PACKET: Low level packet interface
     int sfd = 0;
@@ -244,7 +223,7 @@ void getIfIndex(const char* ifName, uint32_t* ifIndex){
         assert(0);
     }
     *ifIndex = req.ifr_ifindex;
-  //  printf("    ifIndex = %d\n", *ifIndex);
+
 }
 
 void printDeviceTable(){
@@ -288,9 +267,8 @@ void readRouteTable(){
         printf("*** Get server1 vpnExit     : %s    ***\n", vpnExit);
 
         while(fscanf(fp, "%s %s %s", net, gateway, ifname)!=EOF){
-        //printf("net:%s  gw:%s  ifname:%s\n",net,gateway,ifname);
-        int i=0;
-        while(net[i]!='/'){
+            int i=0;
+            while(net[i]!='/'){
             i++;
         }
         net[i] = '\0';
@@ -301,20 +279,6 @@ void readRouteTable(){
         getIfIndex(ifname,&routeTable[routeItemNum].ifIndex);
         routeItemNum++;
         }
-        /*
-        routeTable[routeItemNum].
-        //if(strcmp(ifname,ifName0)==0){
-            //strcpy(routeTable[routeItemNum].ifIndex,ifName0);
-        
-        //}
-        //else if(strcmp(ifname,ifName1)==0){
-            //strcpy(routeTable[routeItemNum].ifIndex,ifName1);
-        //    routeTable[routeItemNum].ifIndex = 3;
-        //}
-        printf("*** Route Rule %d:%s/%d via %s *** \n",
-                routeItemNum,       net,
-                routeTable[routeItemNum].netmask,
-                ifname);*/
         
     }
     fclose(fp);
@@ -335,147 +299,10 @@ void printRouteTable(){
     printf("---------------------------------------------------------\n");
 }
 
-void reply(uint8_t* recvBuf, int recvLength){
-    struct EthPack* ethPack = (struct EthPack*)recvBuf;
-    //printf("Dealing\n");
-    //printf("%04x %04x\n",ethPack->ethType,PROTO_IP);
-    if(ethPack->ethType == htons(ETH_P_ARP)){
-        printf("Receiving an ARP packet!\n");
-    }
-    else if(ethPack->ethType == htons(PROTO_IP)){
-        struct IPPack* ipPack =(struct IPPack*) &ethPack->ipPack;
-        struct IcmpPack* icmpPack = (struct IcmpPack*)(ipPack->payload);
-        /*printf("ippack[0]=%02x ippack[20]=%02x icmp[0]=%02x \n",
-                *((uint8_t*)ipPack),
-                *((uint8_t*)ipPack+20),
-                *((uint8_t*)icmpPack));
-        printf("%04x %04x\n",ipPack->protocol,IP_ICMP);*/
-        if(ipPack->protocol!=IP_ICMP){
-            printf("Not a ICMP Packet\n");
-            printf("icmpPack->type:%02x",icmpPack->type);
-            printf("  %d \n\n",(uint8_t*)&icmpPack->type-(uint8_t*)ipPack);
-            return;
-        }
-        uint32_t ipHdrLen = ipPack->header_length * 4;
-       
-        //printf("icmpPack->type:%02x",icmpPack->type);
-        //printf("  %d \n",(uint8_t*)&icmpPack->type-(uint8_t*)ipPack);
-        switch(icmpPack->type){
-            case ICMP_ECHO_REQUEST:{
-                uint32_t tmp = ipPack->srcIP;
-                ipPack->srcIP = ipPack-> dstIP;
-                ipPack->dstIP = tmp;
-
-                icmpPack->type = ICMP_ECHO_REPLY;
-                icmpPack->checksum = 0;
-                icmpPack->checksum = checkSum((uint8_t*)icmpPack,sizeof(struct IcmpPack));
-                struct sockaddr_ll dstAddr = {
-                    .sll_family = AF_PACKET,
-                    .sll_protocol = htons(ETH_P_IP),
-                    .sll_halen = ETH_ALEN,
-                    .sll_ifindex = ifIndex,
-                };
-                char nextMac[ETH_ALEN]={0x00,0x0c,0x29,0x26,0x3e,0x85};//pc1
-                memcpy(&dstAddr.sll_addr,nextMac,ETH_ALEN);
-                //sockfd = socket(AF_INET,SOCK_RAW,htons(ETH_P_ALL));
-                sendto(sockfd, recvBuf, recvLength,
-                    0, (struct sockaddr*)&dstAddr,sizeof(struct sockaddr_ll));
-                printf("Reply ICMP successfully: from %s ",printIP(ipPack->srcIP));
-                printf("to %s\n",printIP(ipPack->dstIP));
-                //close(sockfd);
-            }break;
-            case ICMP_UNREACHABLE:
-                printf("Destination unreachable!\n\n");
-                break;
-        }
-    }
-}
-
-void dealPacket(char* buf, int length){
-    struct EthPack* ethPack = (struct EthPack*)buf;
-   
-    //printf("%04x %04x \n",ethPack->ethType,PROTO_IP);
-    if(ethPack->ethType == htons(ETH_P_ARP)){
-        printf("Receiving Arp Packet, but I cant handle it.\n");
-        assert(0);
-    }
-    else if(ethPack->ethType == htons(PROTO_IP)){
-        struct IPPack* ipPack = (struct IPPack*)&(ethPack->ipPack);
-        // printf("%d ",((uint8_t*)&ethPack->ethType)-(uint8_t*)ethPack);
-        // printf("%d \n",((uint8_t*)&(ethPack->ipPack))-(uint8_t*)ethPack);
-        //printf("%d ",((uint8_t*)ipPack)-(uint8_t*)ethPack);
-        //printf("%02x %02x\n",*((uint8_t*)ethPack+14),
-        //               *((uint8_t*)ipPack));
-        //printf("pro %x\n",ipPack->protocol);
-        switch(ipPack->protocol){
-            case IP_ICMP: printf("Receving a ICMP Packet \n");break;
-            default : printf("Receiving an unknown packet!\n");
-        }
-        printf("%s ---> ",printIP(ipPack->srcIP));//otherwise not flush the buffer
-        printf("%s",printIP(ipPack->dstIP));
-        //printf("%d\n",routeItemNum);
-        int i=0;
-        for(;i<routeItemNum;i++){
-            uint32_t netAddr = getNetAddr(ipPack->dstIP,
-                                        routeTable[i].netmask);
-            //printf("%s\n",printIP(netAddr));
-            if(netAddr == routeTable[i].dstNet){
-                //printf("%s\n",printIP(routeTable[i].dstNet));
-                printf("(%s/%d) via  interface %d \n",
-                        printIP(routeTable[i].dstNet),
-                        routeTable[i].netmask,
-                        routeTable[i].ifIndex);
-                break;
-            }
-        }
-        if(i == routeItemNum){
-            printf("Unluckily : No Routing Rule!\n");
-        }
-        else{
-            struct sockaddr_ll dstAddr = {
-                .sll_family =AF_PACKET,
-                .sll_protocol = htons(ETH_P_IP),
-                .sll_halen = ETH_ALEN,
-                .sll_ifindex = routeTable[i].ifIndex,
-            };
-            //Use NetAddr to get ifIndex from RouteTable
-            //Then use ifIndex to get mac
-           /* int j=0;
-            for(;j<deviceItemNum;j++){
-                if(deviceTable[j].ifIndex == routeTable[i].ifIndex){
-                    memcpy(dstAddr.sll_halen,deviceTable[j].macAddr,ETH_ALEN);
-                    printf("%s %s\n",routeTable[i].ifIndex,
-                                     deviceTable[j].macAddr);
-                }
-            }*/
-            if( routeTable[i].ifIndex == 2){
-                char tmp[6]={0x00,0x0c,0x29,0x26,0x3e,0x85};// pc1
-                memcpy(dstAddr.sll_addr,tmp,ETH_ALEN);
-            }
-            else if( routeTable[i].ifIndex  == 3 ){
-                char tmp[6]={0x00,0x0c,0x29,0x45,0x09,0x25};//router2 ens38 mac
-                memcpy(dstAddr.sll_addr,tmp,ETH_ALEN);
-            }
-            int ret = sendto(sockfd, buf, length,
-                        0,(struct sockaddr*)&dstAddr,sizeof( struct sockaddr_ll));
-            if(ret < 0){
-                printf("Send Failed!\n");
-                assert(0);
-            }
-            printf("Send successfully!\n");
-        }
-
-
-    
-    
-    }
-}
 
 void repack(uint8_t* recvBuf,int recvLength){
-    //printf("\nvpnentrace111:%x\n",vpnEntrance);
     struct EthPack* ethPack = (struct EthPack*)recvBuf;
     
-    //printf("%04x %04x \n",ethPack->ethType,PROTO_IP);
     if(ethPack->ethType == htons(ETH_P_ARP)){
         printf("Receiving Arp Packet, but I cant handle it.\n");
     }
@@ -487,9 +314,7 @@ void repack(uint8_t* recvBuf,int recvLength){
         }
         printf("%s ---> ",printIP(ipPack->srcIP));//otherwise not flush the buffer
         printf("%s",printIP(ipPack->dstIP));
-        //printf("%d\n",routeItemNum);
 
-        //ipPack->total_length -= htons(IP_HEADER_LEN);
         struct IcmpPack* icmpPack = (struct IcmpPack*)&(ipPack->payload);
         icmpPack->checksum = 0;
         icmpPack->checksum = checkSum((uint8_t*)icmpPack,64);
@@ -532,15 +357,8 @@ void repack(uint8_t* recvBuf,int recvLength){
                 .sll_halen = ETH_ALEN,
                 .sll_ifindex = routeTable[i].ifIndex,
             };
-        
-           /* if( routeTable[i].ifIndex == 2){
-                char tmp[6]={0x00,0x0c,0x29,0x26,0x3e,0x85};// pc1
-                memcpy(dstAddr.sll_addr,tmp,ETH_ALEN);
-            }
-            else*/
-            //printf("\nrouteTable[i].ifIndex=%d\n",routeTable[i].ifIndex);
-             if( routeTable[i].ifIndex  == 2 ){
-                // assert(0);
+
+            if( routeTable[i].ifIndex  == 2 ){
                 char tmp[6]={0x00,0x0c,0x29,0x18,0xaf,0xef};//network ens38
                 memcpy(dstAddr.sll_addr,tmp,ETH_ALEN);
                 memcpy(newethPack.dstMacAddr,tmp,ETH_ALEN);
@@ -586,7 +404,6 @@ void unpack(uint8_t* recvBuf,int recvLength){
             memcpy(&(ethPack->ipPack),ipTmp, 84);
             
             struct IcmpPack* icmpPack = (struct IcmpPack*)&(ipPack->payload);
-            //printf("%02x\n",*(uint8_t*)icmpPack);assert(0);
             icmpPack->checksum = 0;
             icmpPack->checksum = checkSum((uint8_t*)icmpPack,64);
 
@@ -594,7 +411,6 @@ void unpack(uint8_t* recvBuf,int recvLength){
         for(;i<routeItemNum;i++){
             uint32_t netAddr = getNetAddr(ipPack->dstIP,
                                         routeTable[i].netmask);
-            //printf("%s\n",printIP(netAddr));
             if(netAddr == routeTable[i].dstNet){
                 //printf("%s\n",printIP(routeTable[i].dstNet));
                 printf("(%s/%d) via interface %d \n",
@@ -609,9 +425,6 @@ void unpack(uint8_t* recvBuf,int recvLength){
             printf("  Unluckily : No Routing Rule!\n");
         }
         else{
-               
-            
-        
             struct sockaddr_ll dstAddr = {
                 .sll_family =AF_PACKET,
                 .sll_protocol = htons(ETH_P_IP),
@@ -619,13 +432,7 @@ void unpack(uint8_t* recvBuf,int recvLength){
                 .sll_ifindex = routeTable[i].ifIndex,
             };
         
-           /* if( routeTable[i].ifIndex == 2){
-                char tmp[6]={0x00,0x0c,0x29,0x26,0x3e,0x85};// pc1
-                memcpy(dstAddr.sll_addr,tmp,ETH_ALEN);
-            }
-            else*/
-            //printf("\nrouteTable[i].ifIndex=%d\n",routeTable[i].ifIndex);
-             if( routeTable[i].ifIndex  == 3 ){
+            if( routeTable[i].ifIndex  == 3 ){
                 // assert(0);
                 char tmp[6]={0x00,0x0c,0x29,0x97,0x48,0xe6};//pc2 macAddr
                 memcpy(dstAddr.sll_addr,tmp,ETH_ALEN);
@@ -643,15 +450,7 @@ void unpack(uint8_t* recvBuf,int recvLength){
                             recvLength-IP_HEADER_LEN,
                             0,(struct sockaddr*)&dstAddr,
                             sizeof(struct sockaddr_ll));
-            printf("\n%s\n",printIP(ethPack->ipPack.srcIP));
-            printf("%d\n",ethPack->ethType);
-            printf("%02x:%02x:%02x:%02x:%02x:%02x\n",
-                    ethPack->srcMacAddr[0], ethPack->srcMacAddr[1], ethPack->srcMacAddr[2],
-                    ethPack->srcMacAddr[3], ethPack->srcMacAddr[4], ethPack->srcMacAddr[5]);
 
-            printf("%02x:%02x:%02x:%02x:%02x:%02x\n",
-                    ethPack->dstMacAddr[0], ethPack->dstMacAddr[1], ethPack->dstMacAddr[2],
-                    ethPack->dstMacAddr[3], ethPack->dstMacAddr[4], ethPack->dstMacAddr[5]);
             if(ret < 0){
                 printf("Send Failed!\n");
                 assert(0);
@@ -673,23 +472,19 @@ uint32_t getNetAddr(uint32_t ip, uint32_t netmaskNum){
     return htonl( ntohl(ip) & netmask );
 }
 
-uint16_t checkSum(unsigned char *addr, int length)
-{
+uint16_t checkSum(unsigned char *addr, int length){
     unsigned short *p = (unsigned short *)addr;
     unsigned int sum = 0;
-    while (length > 1)
-    {
+    while (length > 1){
         sum += *p;
         p++;
         length = length - 2;
     }
-    if (length == 1)
-    {
+    if (length == 1){
         sum += *p;
     }
 
-    while ((sum >> 16) != 0)
-    {
+    while ((sum >> 16) != 0){
         sum = (sum >> 16) + (sum & 0xffff);
     }
     return (unsigned short)(~sum);
